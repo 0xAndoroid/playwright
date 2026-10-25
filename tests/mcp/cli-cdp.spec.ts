@@ -122,6 +122,20 @@ test('attach via cdp', async ({ cdpServer, cli, server }) => {
   expect(inlineSnapshot).toContain(`- generic [active] [ref=e1]: Hello, world!`);
 });
 
+test('attach does not capture pages that are already open', async ({ cdpServer, cli }, testInfo) => {
+  const browserContext = await cdpServer.start();
+  const [page] = browserContext.pages();
+  await page.setContent(`<input type=password aria-label=Password value=attach-secret>`);
+
+  const { output, exitCode } = await cli('attach', `--cdp=${cdpServer.endpoint}`);
+  expect(exitCode).toBe(0);
+  expect(output).toBe([
+    `### Session \`default\` created, attached to \`${cdpServer.endpoint}\`.`,
+    `Run commands with: playwright-cli -s=default <command>`,
+  ].join('\n'));
+  expect(fs.existsSync(testInfo.outputPath('.playwright-cli'))).toBe(false);
+});
+
 test('tracing-start-stop over cdp', async ({ cdpServer, cli, server }, testInfo) => {
   const browserContext = await cdpServer.start();
   const [page] = browserContext.pages();

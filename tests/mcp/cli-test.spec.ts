@@ -48,9 +48,10 @@ test('debug test and snapshot', async ({ cliEnv, cli, childProcess }) => {
   expect(listOutput1).toContain('subdir');
   expect(listOutput1).toContain(`browser "${session}"`);
 
-  const { output: attachOutput } = await cli('attach', session);
-  expect(attachOutput).toContain('### Paused');
-  expect(attachOutput).toContain(`- Set content at subdir${path.sep}a.test.ts:4`);
+  await cli('attach', session);
+  const { output: pausedOutput } = await cli(`--session=${session}`, 'snapshot');
+  expect(pausedOutput).toContain('### Paused');
+  expect(pausedOutput).toContain(`- Set content at subdir${path.sep}a.test.ts:4`);
 
   const { output: listOutput2 } = await cli('list', '--all');
   expect(listOutput2).toContain('/');
@@ -103,8 +104,7 @@ test('debug test with custom fixture using browser.newContext', async ({ cliEnv,
   const match = testProcess.output.match(/attach ([a-zA-Z0-9-_]+)/);
   const session = match[1];
 
-  const { output: attachOutput } = await cli('attach', session);
-  expect(attachOutput).toContain('### Paused');
+  await cli('attach', session);
 
   const { output: stepOutput } = await cli(`--session=${session}`, 'step-over');
   expect(stepOutput).toContain('### Paused');
@@ -142,9 +142,10 @@ test('debug test that creates multiple contexts', async ({ cliEnv, cli, childPro
   await testProcess.waitForOutput('playwright-cli attach');
   const session = testProcess.output.match(/attach ([a-zA-Z0-9-_]+)/)[1];
 
-  const { output: attachOutput } = await cli('attach', session);
-  expect(attachOutput).toContain('### Paused');
-  expect(attachOutput).toContain(`- Set content at subdir${path.sep}a.test.ts:11`);
+  await cli('attach', session);
+  const { output: pausedOutput } = await cli(`--session=${session}`, 'snapshot');
+  expect(pausedOutput).toContain('### Paused');
+  expect(pausedOutput).toContain(`- Set content at subdir${path.sep}a.test.ts:11`);
 
   const { output: stepOutput } = await cli(`--session=${session}`, 'step-over');
   expect(stepOutput).toContain('### Paused');
@@ -181,7 +182,8 @@ test('debug multiple tests in the same worker', async ({ cliEnv, cli, childProce
 
   for (const buttonName of ['One', 'Two']) {
     await expect(async () => {
-      const { output } = await cli('attach', session);
+      await cli('attach', session);
+      const { output } = await cli(`--session=${session}`, 'snapshot');
       expect(output).toContain('### Paused');
     }).toPass();
     await cli(`--session=${session}`, 'step-over');

@@ -74,8 +74,8 @@ const attach = declareCommand({
     session: z.string().optional().describe('Session name (defaults to bound browser name or "default")'),
     ['idle-timeout']: numberArg.optional().describe('Detach after this many milliseconds without a command. Attached browsers are never detached by default.'),
   }),
-  toolName: 'browser_snapshot',
-  toolParams: () => ({ filename: '<auto>' }),
+  toolName: '',
+  toolParams: () => ({}),
 });
 
 const close = declareCommand({
