@@ -298,7 +298,7 @@ function toAriaNode(element: Element, options: InternalOptions, nameSourceElemen
     result.selected = roleUtils.getAriaSelected(element);
 
   if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-    if (element.type !== 'checkbox' && element.type !== 'radio' && element.type !== 'file')
+    if (element.type !== 'checkbox' && element.type !== 'radio' && element.type !== 'file' && element.type !== 'password')
       result.children = [element.value];
   }
 

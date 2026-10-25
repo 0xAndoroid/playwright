@@ -746,6 +746,13 @@ function getTextAlternativeInternal(element: Element, options: AccessibleNameOpt
     const isOwnLabel = [...(element as (HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)).labels || []].includes(element as any);
     const isOwnLabelledBy = (labelledBy || []).includes(element);
     if (!isOwnLabel && !isOwnLabelledBy) {
+      // SPEC DIFFERENCE.
+      // Spec returns the value of an embedded textbox and browsers expose a masked one.
+      // We never put a password into another element's name, because names end up in aria snapshots.
+      if (tagName === 'INPUT' && (element as HTMLInputElement).type === 'password') {
+        options.visitedElements.add(element);
+        return emptyCompositeString();
+      }
       // Searchbox is a subclass of textbox, so it is handled the same way.
       if (role === 'textbox' || role === 'searchbox') {
         options.visitedElements.add(element);

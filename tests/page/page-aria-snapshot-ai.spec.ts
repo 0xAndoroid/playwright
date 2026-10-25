@@ -548,6 +548,34 @@ it('should truncate data url in link', async ({ page }) => {
   expect(snapshot).not.toContain(base64);
 });
 
+it('should not include password values', async ({ page }) => {
+  await page.setContent(`
+    <input aria-label=Login value=visible-login>
+    <input type=password aria-label=Password value=main-secret>
+    <label><input type=checkbox> Remember <input type=password value=label-secret></label>
+    <div id=host></div>
+    <iframe srcdoc="<input type=password aria-label=Frame value=frame-secret>"></iframe>
+  `);
+  await page.locator('#host').evaluate(host => {
+    host.attachShadow({ mode: 'open' }).innerHTML = '<input type=password aria-label=Shadow value=shadow-secret>';
+  });
+
+  const snapshot = await snapshotForAI(page);
+  expect(snapshot).toContainYaml(`
+    - generic [active] [ref=e1]:
+      - textbox "Login" [ref=e2]: visible-login
+      - textbox "Password" [ref=e3]
+      - generic [ref=e4]:
+        - checkbox "Remember" [ref=e5]
+        - text: Remember
+        - textbox [ref=e6]
+      - textbox "Shadow" [ref=e8]
+      - iframe [ref=e9]:
+        - textbox "Frame" [ref=f1e2]
+  `);
+  expect(snapshot).not.toContain('secret');
+});
+
 it('should gracefully fallback when child frame cant be captured', async ({ page, server }) => {
   await page.setContent(`
     <p>Test</p>
