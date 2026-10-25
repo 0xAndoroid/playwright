@@ -28,7 +28,8 @@
     "./lib/tools/cli-client/program": "./lib/tools/cli-client/program.js"
   },
   "bin": {
-    "playwright-core": "cli.js"
+    "playwright-core": "cli.js",
+    "playwright-cli": "lib/tools/cli-client/cli.js"
   },
   "types": "types/types.d.ts"
 }
