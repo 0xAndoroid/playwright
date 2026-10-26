@@ -1,11 +1,39 @@
 # 0xAndoroid/playwright fork
 
-This fork ships `playwright-cli` with two privacy fixes on top of an upstream Playwright revision:
+This fork ships `playwright-cli` with three privacy fixes on top of an upstream Playwright revision:
 
 - `playwright-cli attach` does not snapshot, save or print the pages that are already open in the attached browser.
-- Aria snapshots never contain the value of an `<input type=password>`, neither as the textbox value nor inside another element's accessible name. This applies to frames and shadow roots, because every snapshot goes through the same injected serializer.
+- Aria snapshots produced by this build never contain the value of an `<input type=password>`, neither as the textbox value nor inside another element's accessible name. This applies to frames and shadow roots, because every snapshot goes through the same injected serializer.
+- The CLI and the MCP server connect only to Playwright servers of this fork, because the server that owns a browser produces its snapshots, and upstream servers at this fork's base include password values in them. See [Snapshot routes](#snapshot-routes).
 
 Upstream issues and pull requests are not filed from this fork.
+
+## Snapshot routes
+
+The process that serializes a page decides whether password values appear in its snapshot.
+
+| Route | Snapshot producer | This build |
+| --- | --- | --- |
+| `open` | the CLI daemon of this build | supported |
+| `attach --cdp=<url or channel>` | the CLI daemon of this build, connected over CDP | supported |
+| `attach --extension` | the CLI daemon of this build, connected through the extension | supported |
+| `attach <name>`, `attach --endpoint=<name>` or MCP `--endpoint=<name>`, where `<name>` is a browser bound by a build of this fork | the server of this fork that bound the browser | supported |
+| `attach <name>` for a browser bound by an upstream build | the upstream server | refused before connecting |
+| `attach --endpoint`, MCP `--endpoint` or `browser.remoteEndpoint` with a `ws://` URL or pipe path | the remote server | refused before connecting |
+
+How the check works:
+
+- When a server of this fork binds a browser, its record in the browser registry (`playwright-cli list --all`) carries `omitsPasswordValues: true`. Upstream servers write the same records without that field.
+- Attach by name, `--endpoint` and the `show` dashboard connect only through a record. A target without a record, or a record without the field, is refused before any connection is made.
+- After connecting, the browser guid from the connection handshake must equal the guid in the record; otherwise the connection is closed and the attach fails. This covers a record whose endpoint is now served by another browser.
+
+Limits:
+
+- The field is trusted as written: a record edited by hand to carry it, with the guid of a live upstream browser, would be accepted.
+- The `show` dashboard does not connect to browsers bound by upstream builds, so their tabs do not appear in it.
+- `playwright test --debug=cli` sessions (`attach tw-<id>`) work only when the test runner uses this fork's `playwright-core`.
+- Only `<input type=password>` values are omitted. A text input styled to look like a password field, and values read explicitly with `eval` or `run-code`, are not covered.
+- The fork is tested on Linux only (CI and local runs); macOS is untested.
 
 ## Pin
 
@@ -52,7 +80,7 @@ node utils/pack_package.js playwright-core "playwright-core-$FORK_VERSION.tgz"
 
 1. Find the upstream revision: `npm view @playwright/cli@<new> dependencies` gives the `playwright-core` version, and `npm view playwright-core@<version> gitHead` gives its commit.
 2. Create the base branch `andoroid/<version>` at that commit and push it.
-3. Create a branch from it and cherry-pick the fork commits: the attach change in `tools/cli-client`, the password change in `packages/injected`, their tests, the `playwright-cli` bin with the shebang in `cli-client/cli.ts`, this file, `.typos.toml` and `fork_andoroid.yml`. Check whether upstream fixed either problem first.
+3. Create a branch from it and cherry-pick the fork commits: the attach change in `tools/cli-client`, the password change in `packages/injected`, the server check in `serverRegistry.ts`, `tools/mcp/browserFactory.ts` and `tools/utils/connect.ts`, their tests, the `playwright-cli` bin with the shebang in `cli-client/cli.ts`, this file, `.typos.toml` and `fork_andoroid.yml`. Check whether upstream fixed any of these problems first.
 4. Set `FORK_VERSION` to `<version>.andoroid.1` and update the pin table.
 5. Rerun the tests before opening the pull request:
 
@@ -61,8 +89,8 @@ node utils/pack_package.js playwright-core "playwright-core-$FORK_VERSION.tgz"
      tests/page/page-aria-snapshot-ai.spec.ts tests/page/page-aria-snapshot.spec.ts \
      tests/page/to-match-aria-snapshot.spec.ts tests/library/role-utils.spec.ts
    npx playwright test --config=tests/mcp/playwright.config.ts --project=chromium \
-     tests/mcp/cli-cdp.spec.ts tests/mcp/cli-test.spec.ts tests/mcp/cli-session.spec.ts tests/mcp/secrets.spec.ts
+     tests/mcp/cli-cdp.spec.ts tests/mcp/cli-endpoint.spec.ts tests/mcp/cli-test.spec.ts tests/mcp/cli-session.spec.ts tests/mcp/secrets.spec.ts
    ```
 
-   `attach does not capture pages that are already open` and `should not include password values` must fail on the unpatched base and pass after the cherry-picks.
+   `attach does not capture pages that are already open`, `should not include password values` and `attach refuses browsers that this build did not bind` must fail on the unpatched base and pass after the cherry-picks.
 6. Open the pull request against the new base branch, wait for green CI, then follow the release steps.
