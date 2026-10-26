@@ -25,8 +25,7 @@ export async function connectToBrowserAcrossVersions(descriptor: BrowserDescript
   const browserType = pw[descriptor.browser.browserName] as playwright.BrowserType;
   const browser = await browserType.connect(descriptorEndpoint(descriptor));
   // The guid from the connection handshake shows that the endpoint serves the browser of this record, not a server that reused the endpoint.
-  // eslint-disable-next-line no-restricted-syntax
-  if ((browser as any)._guid !== descriptor.browser.guid) {
+  if ((browser as playwright.Browser & { _guid: string })._guid !== descriptor.browser.guid) {
     await browser.close().catch(() => {});
     throw new Error(`The endpoint registered for "${descriptor.title}" is served by a different browser.`);
   }
