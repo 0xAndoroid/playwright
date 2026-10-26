@@ -56,7 +56,7 @@ jobs:
     - name: CLI tests
       run: >-
         npx playwright test --config=tests/mcp/playwright.config.ts --project=chromium
-        tests/mcp/cli-cdp.spec.ts tests/mcp/cli-test.spec.ts tests/mcp/cli-session.spec.ts tests/mcp/secrets.spec.ts
+        tests/mcp/cli-cdp.spec.ts tests/mcp/cli-endpoint.spec.ts tests/mcp/cli-test.spec.ts tests/mcp/cli-session.spec.ts tests/mcp/secrets.spec.ts
     - name: Extension CLI test
       run: xvfb-run --auto-servernum -- npx playwright test --config=tests/extension/playwright.config.ts tests/extension/cli.spec.ts
 

@@ -26,7 +26,6 @@ import { TestServer } from '../config/testserver';
 import { serverFixtures } from '../config/serverFixtures';
 import { tools } from '../../packages/playwright-core/lib/coreBundle';
 import { commonFixtures } from '../config/commonFixtures';
-import { RunServer } from '../config/remoteServer';
 import { inheritAndCleanEnv } from '../config/utils';
 
 import type { CommonFixtures, CommonWorkerFixtures } from '../config/commonFixtures';
@@ -67,8 +66,6 @@ export type StartClient = (options?: {
 type TestFixtures = {
   client: Client;
   startClient: StartClient;
-  wsEndpoint: string;
-  runServerEndpoint: string;
   cdpServer: CDPServer;
   server: TestServer;
   httpsServer: TestServer;
@@ -155,19 +152,6 @@ export const test = serverTest.extend<TestFixtures & TestOptions, WorkerFixtures
     });
 
     await Promise.all(clients.map(client => client.close()));
-  },
-
-  wsEndpoint: async ({ }, use) => {
-    const browserServer = await chromium.launchServer();
-    await use(browserServer.wsEndpoint());
-    await browserServer.close();
-  },
-
-  runServerEndpoint: async ({ childProcess }, use) => {
-    const runServer = new RunServer();
-    await runServer.start(childProcess);
-    await use(runServer.wsEndpoint());
-    await runServer.close();
   },
 
   cdpServer: async ({ mcpBrowser }, use, testInfo) => {

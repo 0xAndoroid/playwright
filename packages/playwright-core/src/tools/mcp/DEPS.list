@@ -17,7 +17,6 @@ node_modules/ini
 node_modules/ws
 
 [browserFactory.ts]
-../../client/connect.ts
 ../utils/connect.ts
 
 [program.ts]

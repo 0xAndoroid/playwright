@@ -24,7 +24,7 @@ import chokidar from 'chokidar';
 import { packageJSON, packageRoot } from './package';
 
 import type { FSWatcher } from 'chokidar';
-// Only client depenencies with backward compatibility guarantees should be imported here.
+// Only client dependencies with backward compatibility guarantees should be imported here.
 import type { LaunchOptions } from '../types/types';
 
 const packageVersion = packageJSON.version;
@@ -47,6 +47,8 @@ export type BrowserDescriptor = EndpointInfo & {
   playwrightVersion: string;
   playwrightLib: string;
   browser: BrowserInfo;
+  // Written only by this fork's servers, whose snapshots omit password values; see connectToBrowserAcrossVersions.
+  omitsPasswordValues?: boolean;
 };
 
 export type BrowserStatus = BrowserDescriptor & { canConnect: boolean };
@@ -133,6 +135,7 @@ class ServerRegistry extends EventEmitter {
       browser,
       endpoint: endpoint.endpoint,
       workspaceDir: endpoint.workspaceDir,
+      omitsPasswordValues: true,
     };
     await fs.promises.writeFile(file, JSON.stringify(descriptor, null, 2), 'utf-8');
   }
