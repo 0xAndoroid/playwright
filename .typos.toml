@@ -1,0 +1,3 @@
+[default.extend-words]
+# Upstream test data, for example `<abbr>ba</abbr>` in tests/page/page-aria-snapshot-ai.spec.ts.
+ba = "ba"

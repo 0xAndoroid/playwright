@@ -64,7 +64,7 @@ export interface Output {
   deleteData(session: string, result: { existed: boolean, deletedUserDataDir: boolean }): void;
   killAll(pids: number[]): void;
   open(session: string, pid: number | undefined, toolResult: string): void;
-  attach(session: string, pid: number | undefined, endpoint: string | undefined, toolResult: string): void;
+  attach(session: string, pid: number | undefined, endpoint: string | undefined): void;
   close(session: string, wasOpen: boolean): void;
   detach(session: string, wasAttached: boolean): void;
   installed(): void;
@@ -221,16 +221,13 @@ export class TextOutput implements Output {
       console.log(toolResult);
   }
 
-  attach(session: string, pid: number | undefined, endpoint: string | undefined, toolResult: string): void {
+  attach(session: string, pid: number | undefined, endpoint: string | undefined): void {
     if (endpoint) {
       console.log(`### Session \`${session}\` created, attached to \`${endpoint}\`.`);
       console.log(`Run commands with: playwright-cli -s=${session} <command>`);
-      console.log('');
     } else {
       console.log(`### Browser \`${session}\` opened with pid ${pid}.`);
     }
-    if (toolResult)
-      console.log(toolResult);
   }
 
   close(session: string, wasOpen: boolean): void {
@@ -343,12 +340,11 @@ export class JsonOutput implements Output {
     this._emit({ session, pid, result: parseJsonText(toolResult) });
   }
 
-  attach(session: string, pid: number | undefined, endpoint: string | undefined, toolResult: string): void {
+  attach(session: string, pid: number | undefined, endpoint: string | undefined): void {
     this._emit({
       session,
       pid,
       ...(endpoint ? { endpoint } : {}),
-      result: parseJsonText(toolResult),
     });
   }
 

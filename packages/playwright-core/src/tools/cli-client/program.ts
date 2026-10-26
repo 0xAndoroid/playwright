@@ -182,9 +182,7 @@ export async function program(options?: { embedderVersion?: string}) {
       const attachSessionName = explicitSessionName(args.session as string) ?? attachTarget ?? cdpChannel ?? extensionChannel ?? sessionName;
       args.session = attachSessionName;
       const { pid } = await startSession(attachSessionName, registry, clientInfo, args, 'attach');
-      const newEntry = await registry.loadEntry(clientInfo, attachSessionName);
-      const toolText = await runInSessionOrStop(newEntry, clientInfo, { _: ['snapshot'], filename: '<auto>' }, output);
-      output.attach(attachSessionName, pid, targetName, toolText);
+      output.attach(attachSessionName, pid, targetName);
       return;
     }
     case 'close': {
@@ -309,7 +307,7 @@ async function runInSession(entry: SessionFile, clientInfo: ClientInfo, args: Mi
   return result.text;
 }
 
-// Used by `open` / `attach` after `startSession`: if the implicit goto/snapshot
+// Used by `open` after `startSession`: if the implicit goto
 // fails post-spawn (e.g. tool runtime error), stop the freshly-spawned daemon
 // so we don't strand a detached browser. Pre-spawn arg validation lives in
 // `validateArgs`; this is a defense-in-depth backstop for runtime errors.

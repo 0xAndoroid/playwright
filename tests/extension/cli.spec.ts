@@ -43,9 +43,10 @@ test('attach <url> --extension', async ({ startAttach, cli, server }) => {
 
   {
     const { output } = await cliPromise;
-    expect(output).toContain(`### Page`);
-    expect(output).toContain(`- Page URL: chrome-extension://${extensionId}/connect.html?`);
-    expect(output).toContain(`- Page Title: Welcome`);
+    expect(output).toBe([
+      '### Session `chromium` created, attached to `chromium`.',
+      'Run commands with: playwright-cli -s=chromium <command>',
+    ].join('\n'));
   }
 
   {

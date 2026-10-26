@@ -1,0 +1,100 @@
+name: fork andoroid
+
+on:
+  pull_request:
+    branches:
+      - 'andoroid/**'
+  push:
+    branches:
+      - 'andoroid/**'
+    tags:
+      - 'v*.andoroid.*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 1
+  # Bump for every fork release; the release tag must be v$FORK_VERSION. See FORK.md.
+  FORK_VERSION: 1.64.0-alpha-1790635538000.andoroid.1
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: 22
+    - run: npm ci
+    - run: npm run build
+    - run: npx playwright install --with-deps
+    - run: npm run lint
+    - name: Verify clean tree
+      run: test -z "$(git status --porcelain)" || { git status --short; git diff; exit 1; }
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: 22
+    - run: npm ci
+    - run: npm run build
+    - run: npx playwright install --with-deps chromium
+    - name: Aria snapshot and accessible name tests
+      run: >-
+        npx playwright test --config=tests/library/playwright.config.ts --project='chromium-*'
+        tests/page/page-aria-snapshot-ai.spec.ts tests/page/page-aria-snapshot.spec.ts
+        tests/page/to-match-aria-snapshot.spec.ts tests/library/role-utils.spec.ts
+    - name: CLI tests
+      run: >-
+        npx playwright test --config=tests/mcp/playwright.config.ts --project=chromium
+        tests/mcp/cli-cdp.spec.ts tests/mcp/cli-endpoint.spec.ts tests/mcp/cli-test.spec.ts tests/mcp/cli-session.spec.ts tests/mcp/secrets.spec.ts
+    - name: Extension CLI test
+      run: xvfb-run --auto-servernum -- npx playwright test --config=tests/extension/playwright.config.ts tests/extension/cli.spec.ts
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: 22
+    - run: npm ci
+    - run: npm run build
+    - run: node utils/workspace.js --set-version "$FORK_VERSION"
+    - run: mkdir -p dist && node utils/pack_package.js playwright-core "dist/playwright-core-$FORK_VERSION.tgz"
+    - name: Install the package and check its CLI version
+      run: |
+        npm install -g --prefix "$RUNNER_TEMP/pw" "./dist/playwright-core-$FORK_VERSION.tgz"
+        test "$("$RUNNER_TEMP/pw/bin/playwright-cli" --version)" = "$FORK_VERSION"
+    - run: cd dist && sha256sum ./*.tgz | tee SHA256SUMS
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: playwright-core-${{ env.FORK_VERSION }}
+        path: dist/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [lint, test, package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        name: playwright-core-${{ env.FORK_VERSION }}
+        path: dist/
+    - name: Publish the release asset
+      run: |
+        test "$GITHUB_REF_NAME" = "v$FORK_VERSION"
+        gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --notes "playwright-core $FORK_VERSION, built from $GITHUB_SHA. See FORK.md."
+      env:
+        GH_TOKEN: ${{ github.token }}

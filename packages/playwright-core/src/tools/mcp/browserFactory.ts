@@ -27,13 +27,9 @@ import { createExtensionBrowser } from './extensionContextFactory';
 import { connectToBrowserAcrossVersions, descriptorEndpoint } from '../utils/connect';
 import { serverRegistry } from '../../serverRegistry';
 import { resolveExtensionOptions } from './config';
-// eslint-disable-next-line no-restricted-imports
-import { connectToBrowser } from '../../client/connect';
 
 import type { CLIOptions, FullConfig } from './config';
 import type { ClientInfo } from '../utils/mcp/server';
-// eslint-disable-next-line no-restricted-imports
-import type { Playwright } from '../../client/playwright';
 import type * as playwrightTypes from '../../..';
 import type { BrowserInfo } from '../../serverRegistry';
 
@@ -154,33 +150,23 @@ function remoteConnectOptions(config: FullConfig): { endpoint: string, options: 
 
 async function createRemoteBrowser(config: FullConfig): Promise<BrowserWithInfo> {
   testDebug('create browser (remote)');
-  const { endpoint, options } = remoteConnectOptions(config);
+  const { endpoint } = remoteConnectOptions(config);
 
   const descriptor = await serverRegistry.find(endpoint);
-  if (descriptor) {
-    const browser = await connectToBrowserAcrossVersions(descriptor);
-    return {
-      browser,
-      browserInfo: {
-        guid: descriptor.browser.guid,
-        browserName: descriptor.browser.browserName,
-        launchOptions: descriptor.browser.launchOptions,
-        userDataDir: descriptor.browser.userDataDir
-      },
-      endpoint: descriptorEndpoint(descriptor),
-      ownership: 'attached'
-    };
-  }
-
-  const playwrightObject = playwright as Playwright;
-  // Use connectToBrowser instead of playwright[browserName].connect because we don't have browserName.
-  const browser = await connectToBrowser(playwrightObject, { endpoint, ...options });
-  browser._connectToBrowserType(playwrightObject[browser._browserName], {}, undefined);
-  // A browser started via `launchServer` exposes no contexts until one is
-  // created, so create one when attaching to such a server.
-  if (!browser.contexts().length)
-    await browser.newContext(config.browser.contextOptions);
-  return { browser, browserInfo: { ...browserInfo(browser, config), browserName: browser._browserName }, endpoint, ownership: 'attached' };
+  if (!descriptor)
+    throw new Error(`"${endpoint}" is not a browser bound by this Playwright fork (see "playwright-cli list --all"). Snapshots are produced by the server that owns the browser, and other Playwright builds can include password values in them; connect over CDP or through the extension instead.`);
+  const browser = await connectToBrowserAcrossVersions(descriptor);
+  return {
+    browser,
+    browserInfo: {
+      guid: descriptor.browser.guid,
+      browserName: descriptor.browser.browserName,
+      launchOptions: descriptor.browser.launchOptions,
+      userDataDir: descriptor.browser.userDataDir
+    },
+    endpoint: descriptorEndpoint(descriptor),
+    ownership: 'attached'
+  };
 }
 
 async function createPersistentBrowser(config: FullConfig, clientInfo: ClientInfo): Promise<playwrightTypes.Browser> {

@@ -122,6 +122,32 @@ test('attach via cdp', async ({ cdpServer, cli, server }) => {
   expect(inlineSnapshot).toContain(`- generic [active] [ref=e1]: Hello, world!`);
 });
 
+test('attach does not capture pages that are already open', async ({ cdpServer, cli }, testInfo) => {
+  const browserContext = await cdpServer.start();
+  const [page] = browserContext.pages();
+  await page.setContent(`<input type=password aria-label=Password value=attach-secret>`);
+
+  const { output, exitCode } = await cli('attach', `--cdp=${cdpServer.endpoint}`);
+  expect(exitCode).toBe(0);
+  expect(output).toBe([
+    `### Session \`default\` created, attached to \`${cdpServer.endpoint}\`.`,
+    `Run commands with: playwright-cli -s=default <command>`,
+  ].join('\n'));
+  expect(fs.existsSync(testInfo.outputPath('.playwright-cli'))).toBe(false);
+});
+
+test('snapshot over cdp omits password values', async ({ cdpServer, cli }) => {
+  const browserContext = await cdpServer.start();
+  const [page] = browserContext.pages();
+  await page.setContent(`<input aria-label=Login value=visible-login><input type=password aria-label=Password value=direct-secret><label><input type=checkbox>Remember<input type=password value=label-secret></label>`);
+
+  await cli('attach', `--cdp=${cdpServer.endpoint}`);
+  const { inlineSnapshot } = await cli('snapshot');
+  expect(inlineSnapshot).toMatch(/textbox "Login" \[ref=e\d+\]: visible-login/);
+  expect(inlineSnapshot).toMatch(/checkbox "Remember" \[ref=e\d+\]/);
+  expect(inlineSnapshot).not.toContain('secret');
+});
+
 test('tracing-start-stop over cdp', async ({ cdpServer, cli, server }, testInfo) => {
   const browserContext = await cdpServer.start();
   const [page] = browserContext.pages();
