@@ -41,7 +41,8 @@ Limits:
 | --- | --- |
 | Upstream base | `e8149b8257d32dcf8f72573ecc43e72439da7080`, the `gitHead` of `playwright-core@1.64.0-alpha-1790635538000`, which `@playwright/cli@0.1.22` depends on |
 | Fork base branch | `andoroid/1.64.0-alpha-1790635538000` |
-| Fork version | `1.64.0-alpha-1790635538000.andoroid.1`, set by `FORK_VERSION` in `.github/workflows/fork_andoroid.yml` |
+| Upstream backports | `0726df3130b0972faa267c0fb38df904a39150ef` (connecting over CDP detaches from a target reported without `browserContextId` instead of failing an assertion), in upstream releases from 1.65.0; drop it when rebasing onto one |
+| Fork version | `1.64.0-alpha-1790635538000.andoroid.2`, set by `FORK_VERSION` in `.github/workflows/fork_andoroid.yml` |
 | Release tag | `v<fork version>` |
 | Release asset | `playwright-core-<fork version>.tgz` and `SHA256SUMS` |
 
