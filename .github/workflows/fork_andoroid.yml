@@ -18,7 +18,7 @@ concurrency:
 env:
   FORCE_COLOR: 1
   # Bump for every fork release; the release tag must be v$FORK_VERSION. See FORK.md.
-  FORK_VERSION: 1.64.0-alpha-1790635538000.andoroid.1
+  FORK_VERSION: 1.64.0-alpha-1790635538000.andoroid.2
 
 permissions:
   contents: read
