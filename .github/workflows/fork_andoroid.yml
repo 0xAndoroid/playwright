@@ -49,10 +49,13 @@ jobs:
         fi
     - name: Smoke test CLI attach and snapshot
       if: steps.smoke.outputs.run == 'true'
-      run: >-
-        npx playwright test --config=tests/mcp/playwright.config.ts --project=chromium
-        tests/mcp/cli-cdp.spec.ts --grep 'snapshot over cdp omits password values$'
-        --fail-on-flaky-tests --reporter=line
+      env:
+        PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/playwright-smoke.json
+      run: |
+        npx playwright test --config=tests/mcp/playwright.config.ts --project=chromium \
+          tests/mcp/cli-cdp.spec.ts --grep 'snapshot over cdp omits password values$' \
+          --fail-on-flaky-tests --reporter=line,json
+        jq -e '[.suites[] | recurse(.suites[]?) | .specs[].tests[].results[].status] == ["passed"]' "$PLAYWRIGHT_JSON_OUTPUT_FILE"
 
   test:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
