@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -28,6 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 2
     - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: 22
@@ -37,8 +39,23 @@ jobs:
     - run: npm run lint
     - name: Verify clean tree
       run: test -z "$(git status --porcelain)" || { git status --short; git diff; exit 1; }
+    - name: Check for changes outside Markdown
+      if: github.event_name == 'pull_request'
+      id: smoke
+      run: |
+        changes=$(git diff --name-only --no-renames HEAD^1 HEAD -- ':(exclude,glob)**/*.md')
+        if [ -n "$changes" ]; then
+          echo 'run=true' >> "$GITHUB_OUTPUT"
+        fi
+    - name: Smoke test CLI attach and snapshot
+      if: steps.smoke.outputs.run == 'true'
+      run: >-
+        npx playwright test --config=tests/mcp/playwright.config.ts --project=chromium
+        tests/mcp/cli-cdp.spec.ts --grep 'snapshot over cdp omits password values$'
+        --fail-on-flaky-tests --reporter=line
 
   test:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
