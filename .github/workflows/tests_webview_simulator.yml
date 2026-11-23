@@ -3,6 +3,8 @@ name: "tests WebView (iOS Simulator)"
 on:
   workflow_dispatch:
   pull_request:
+    branches-ignore:
+      - 'andoroid/**'
     paths:
       - 'tests/webview/**'
       - 'packages/playwright-core/src/server/webkit/webview/**'
